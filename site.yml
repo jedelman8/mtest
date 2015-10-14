@@ -6,6 +6,9 @@
 
 
 - hosts: spine
+  connection: local
+  gather_facts: no
+
   roles:
     - role: spine
 
