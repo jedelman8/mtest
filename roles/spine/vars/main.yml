@@ -1,0 +1,69 @@
+---
+
+vlans: "2-20"
+
+trunk_vlans: "2-20"
+native: 2
+pkl_vlan: 20
+
+named_spine_vlans:
+  - { vlan_id: 10, name: test_segment }
+  - { vlan_id: 20, name: peer_keepalive }
+  - { vlan_id: 2, name: native }
+
+
+default_trunk_interfaces:
+  - Ethernet1/4
+  - Ethernet1/5
+  - Ethernet1/6
+  - Ethernet1/7
+  - Ethernet2/5
+  - Ethernet2/6
+
+interfaces_to_default:
+  - Ethernet1/4
+  - Ethernet1/5
+  - Ethernet1/6
+  - Ethernet1/7
+  - Ethernet2/5
+  - Ethernet2/6
+  - po10
+  - po11
+  - po12
+
+pkl_interfaces:
+  - mgmt0
+
+logical_interfaces_to_create:
+  - vlan10
+  - vlan20
+
+vrfs:
+  - management
+
+pkl_link:
+  vrf: management
+  interface: mgmt0
+
+hsrp:
+  - { interface: vlan10, vip: 10.1.10.1, group: 10 }
+  - { interface: vlan20, vip: 10.1.20.1, group: 20 }
+
+portchannels:
+  10:
+    members:
+      - Ethernet1/4
+      - Ethernet1/5
+    mode: active
+  11:
+    members:
+      - Ethernet1/6
+      - Ethernet1/7
+    mode: active
+  12:
+    members:
+      - Ethernet2/5
+      - Ethernet2/6
+    mode: active
+
+peerlink_po: 12

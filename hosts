@@ -1,0 +1,9 @@
+[all:vars]
+ansible_connection=local
+un=admin
+pwd=password
+
+[spine]
+n9k1  mgmt_ip=54.25.255.13
+n9k2  mgmt_ip=54.25.255.14
+

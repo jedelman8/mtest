@@ -1,0 +1,99 @@
+---
+
+############################################################
+#  VLAN CONFIGURATION
+############################################################
+- name: ensure VLANs exist on switches
+  nxos_vlan: vlan_id={{ vlans }} state=present host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+
+- name: ensure names exist for important vlans
+  nxos_vlan: vlan_id={{ item.vlan_id }} name={{ item.name }} host={{ inventory_hostname }} state=present username={{ un }} password={{ pwd }}
+  with_items: named_spine_vlans
+
+#############################################################
+# FOR DEMO: DEFAULT INTERFACES
+#############################################################
+- name: L2 config for all ports except peer keepalive
+  nxos_interface: interface={{ item }} state=absent host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: interfaces_to_default
+
+#############################################################
+# Layer 2 Switchport Configs
+#############################################################
+- name: L2 config for all ports except peer keepalive
+  nxos_switchport: interface={{ item }} mode=trunk native_vlan={{ native }} trunk_vlans={{ trunk_vlans }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: default_trunk_interfaces
+
+#- name: L2 config for peer keepalive link
+#  nxos_switchport: interface={{ item }} mode=trunk native_vlan={{ native }} trunk_vlans={{ pkl_vlan }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+#  with_items: pkl_interfaces
+
+
+#############################################################
+# Portchannels
+#############################################################
+
+- name: configure portchannels
+  nxos_portchannel:
+    group: "{{ item.key }}"
+    members: "{{ item.value.members }}"
+    mode: "{{ item.value.mode }}"
+    host: "{{ inventory_hostname }}"
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+  with_dict: portchannels
+
+
+#############################################################
+# Layer 3 Configuration
+#############################################################
+
+- name: create logical interfaces
+  nxos_interface: interface={{ item }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: logical_interfaces_to_create
+
+- name: ensure VRF are created
+  nxos_vrf: vrf={{ item }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: vrfs
+  tags: pcc
+
+- name: assgn VRF to peer keepalive link interfaces
+  nxos_vrf_interface: interface={{ pkl_link.interface }} vrf={{ pkl_link.vrf }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  tags: pcc
+
+- name: assign IP addresses
+  nxos_ipv4_interface: interface={{ item.interface }} ip_addr={{ item.ip }} mask={{ item.mask }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: layer3ip
+  tags: pcc
+
+- name: config HSRP
+  nxos_hsrp: group={{ item.group }} interface={{ item.interface }} vip={{ item.vip }} priority={{ hsrp_priority }} host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  with_items: hsrp
+  tags: pcc
+#############################################################
+# Global VPC Configuration
+#############################################################
+
+- name: global vpc configuration params
+  nxos_vpc:
+    domain={{ item.value.domain }}
+    system_priority={{ item.value.systempri }}
+    role_priority={{ item.value.rolepri }}
+    pkl_src={{ item.value.pkl.src }}
+    pkl_dest={{ item.value.pkl.dest }}
+    pkl_vrf={{ item.value.pkl.vrf }}
+    host={{ inventory_hostname }}
+    username={{ un }}
+    password={{ pwd }}
+  with_dict: vpc
+  tags: pcc
+
+#############################################################
+# Portchannel VPC Configuration
+#############################################################
+
+- name: portchannel vpc peer link configuration
+  nxos_vpc_interface:  portchannel={{ peerlink_po }} peer_link=true host={{ inventory_hostname }} username={{ un }} password={{ pwd }}
+  tags: pcc
+#- name: portchannel vpc  configuration
+#  nxos_vpc_interface:  portchannel=11 vpc=11 host={{ inventory_hostname }}
